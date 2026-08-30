@@ -7,6 +7,7 @@
 -- (Default: ~/Pictures/Wallpapers and 300 seconds)
 hs.loadSpoon("WallpaperRotator")
 
+-- Bind hotkeys for WallpaperRotator actions
 spoon.WallpaperRotator:bindHotkeys({
     rotate = { {"ctrl", "alt", "cmd"}, "W" },
     choose_folder = { {"ctrl", "alt", "cmd"}, "O" },

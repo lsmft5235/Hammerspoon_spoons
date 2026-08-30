@@ -2,7 +2,7 @@
 ---
 --- Periodically rotates desktop wallpapers across all connected screens from a directory of images.
 ---
---- Download: [https://github.com/Hammerspoon/Spoons](https://github.com/Hammerspoon/Spoons)
+--- Download: [https://github.com/lsmft5235/Hammerspoon_spoons](https://github.com/lsmft5235/Hammerspoon_spoons)
 
 local obj = {}
 obj.__index = obj
@@ -11,7 +11,7 @@ obj.__index = obj
 obj.name = "WallpaperRotator"
 obj.version = "1.0.0"
 obj.author = "LSMFT5235"
-obj.homepage = "https://github.com/Hammerspoon/Spoons"
+obj.homepage = "https://github.com/lsmft5235/Hammerspoon_spoons"
 obj.license = "MIT - https://opensource.org/licenses/MIT"
 
 --- WallpaperRotator.logger
