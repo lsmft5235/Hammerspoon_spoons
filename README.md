@@ -15,6 +15,6 @@ Periodically rotates desktop wallpapers across all connected screens, picking a 
 
 - Tested with MacOS Tahoe 26.6.2
 
-See [Wallpaper_Rotator/init.lua](Wallpaper_Rotator/init.lua) for an example configuration.
+See [Wallpaper_Rotator/Add-to-init.lua](Wallpaper_Rotator/Add-to-init.lua) for an example configuration.
 
 
