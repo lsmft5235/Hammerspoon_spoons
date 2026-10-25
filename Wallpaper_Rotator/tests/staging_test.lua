@@ -52,7 +52,7 @@ local function fixture()
     local screen = {
         name = function() return "test display" end,
         id = function() return 1 end,
-        fullFrame = function() return { x = 0, y = 0, w = 100, h = 100 } end,
+        fullFrame = function() return f.screenFrame or { x = 0, y = 0, w = 100, h = 100 } end,
         desktopImageURL = function(_, url)
             if f.screenError then error("screen unavailable") end
             if url and not f.reject then f.current = url end
@@ -118,12 +118,15 @@ local function fixture()
                     end,
                     name = function() return "second display" end,
                     id = function() return 2 end,
-                    fullFrame = screen.fullFrame
+                    fullFrame = function() return f.secondFrame or screen.fullFrame() end
                 }
             end
             return screens
         end },
-        image = { imageFromPath = function() return f.image end },
+        image = { imageFromPath = function()
+            if not f.image then return nil end
+            return { size = function() return f.imageSize or { w = 100, h = 100 } end }
+        end },
         timer = { doAfter = function(delay, fn)
             local timer = { at = f.time + delay, fn = fn }
             timer.stop = function() timer.stopped = true end
@@ -141,11 +144,13 @@ local function fixture()
         end },
         canvas = {
             windowLevels = { desktop = 1 },
-            new = function()
+            new = function(frame)
                 local canvas = {
+                    frame = frame,
                     level = noop, behaviorAsLabels = noop, clickActivating = noop,
-                    appendElements = noop, show = noop
+                    show = noop
                 }
+                canvas.appendElements = function(_, element) canvas.element = element end
                 canvas.delete = function()
                     assert(not canvas.deleted, "overlay deleted twice")
                     canvas.deleted = true
@@ -390,6 +395,42 @@ test("fade waits for fallback; cache purge waits for fade and coalesces", functi
     assert(#f.tasks == 2 and s.rotationCount == 1)
     f.tasks[2].complete(0, "removed 1 BMP / 4 bytes")
     assert(not s.cacheCleanupTask and f.hasLog("removed 1 BMP"))
+end)
+
+test("fade covers UHD screens without distortion or a size change at handoff", function()
+    local cases = {
+        { w = 1920, h = 1080, x = 0, y = 0, width = 3840, height = 2160 },
+        { w = 7680, h = 4320, x = 0, y = 0, width = 3840, height = 2160 },
+        { w = 1080, h = 1920, x = 0, y = -7000 / 3, width = 3840, height = 20480 / 3 },
+        { w = 4000, h = 1000, x = -2400, y = 0, width = 8640, height = 2160 }
+    }
+    local function near(a, b) assert(math.abs(a - b) < 0.000001, tostring(a) .. " ~= " .. tostring(b)) end
+    for _, case in ipairs(cases) do
+        local f, s = fixture()
+        f.image = true
+        f.imageSize = { w = case.w, h = case.h }
+        f.screenFrame = { x = -3840, y = 100, w = 3840, h = 2160 }
+        f.secondUrl = "file:///original.jpg"
+        f.secondFrame = { x = 0, y = 0, w = 1080, h = 1920 }
+        s:rotate()
+        local canvas = f.canvases[1]
+        local element, frame = canvas.element, canvas.element.frame
+        assert(canvas.frame.x == -3840 and canvas.frame.y == 100)
+        assert(element.imageScaling == "scaleProportionally" and element.imageAlignment == "center")
+        near(frame.x, case.x)
+        near(frame.y, case.y)
+        near(frame.w, case.width)
+        near(frame.h, case.height)
+        near(frame.w / frame.h, case.w / case.h)
+        local second = f.canvases[2].element.frame
+        assert(second.w >= 1080 and second.h >= 1920)
+        near(second.x, (1080 - second.w) / 2)
+        near(second.y, (1920 - second.h) / 2)
+        near(second.w / second.h, case.w / case.h)
+        f.advance(s.fadeDuration + 0.25 + 0.6)
+        assert(canvas.deleted and f.canvases[2].deleted)
+        assert(not next(s.inFlightPaths))
+    end
 end)
 
 test("fallback timeout, failure and task-start/create failure release protection once", function()

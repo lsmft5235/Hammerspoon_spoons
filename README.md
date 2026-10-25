@@ -7,7 +7,8 @@ See: https://www.hammerspoon.org/
 ### WallpaperRotator
 Periodically rotates desktop wallpapers across all connected screens, picking a random image from a configurable directory (default `~/Pictures/Wallpapers`). Features include:
 - Configurable rotation interval, persisted across restarts
-- Smooth crossfade transitions between wallpapers via `hs.canvas`
+- Smooth crossfade transitions via `hs.canvas`, using centered aspect-fill scaling
+  to match macOS Fill Screen (including upscaling smaller images)
 - A folder picker for choosing the wallpaper directory
 - An optional on-screen countdown badge showing time until the next rotation
 - Unique staging filenames to avoid stale renders when macOS reuses a wallpaper URL

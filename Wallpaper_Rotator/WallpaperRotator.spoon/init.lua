@@ -508,6 +508,7 @@ function obj:rotate()
     self.rotationToken = (self.rotationToken or 0) + 1
     local rotationToken = self.rotationToken
     local fadeDuration = self.fadeDuration or 1.2
+    local imageSize = img:size()
     local transitionCanvases = {}
     local function deleteOverlays()
         if overlayDone then return end
@@ -519,6 +520,9 @@ function obj:rotate()
 
     for _, screen in ipairs(hs.screen.allScreens()) do
         local screenFrame = screen:fullFrame()
+        -- Match macOS Fill Screen: scale to cover, then center-crop at the canvas bounds.
+        local scale = math.max(screenFrame.w / imageSize.w, screenFrame.h / imageSize.h)
+        local imageWidth, imageHeight = imageSize.w * scale, imageSize.h * scale
         local canvas = hs.canvas.new(screenFrame)
         canvas:level(hs.canvas.windowLevels.desktop)
         canvas:behaviorAsLabels({ "canJoinAllSpaces", "stationary", "ignoresCycle" })
@@ -526,8 +530,14 @@ function obj:rotate()
         canvas:appendElements({
             type = "image",
             image = img,
-            imageScaling = "scaleToFit",
-            frame = { x = 0, y = 0, w = screenFrame.w, h = screenFrame.h }
+            imageScaling = "scaleProportionally",
+            imageAlignment = "center",
+            frame = {
+                x = (screenFrame.w - imageWidth) / 2,
+                y = (screenFrame.h - imageHeight) / 2,
+                w = imageWidth,
+                h = imageHeight
+            }
         })
         canvas:show(fadeDuration)
         table.insert(transitionCanvases, canvas)
