@@ -13,6 +13,8 @@ spoon.WallpaperRotator.maxStagedBytes = 256 * 1024 * 1024
 spoon.WallpaperRotator.enableFadeTransition = true
 spoon.WallpaperRotator.enableCacheCleanup = true
 spoon.WallpaperRotator.cleanupInterval = 10
+-- Set false to hide routine staging/cache reports without hiding warnings/errors.
+spoon.WallpaperRotator.logCleanupReports = false
 
 -- Bind hotkeys for WallpaperRotator actions
 spoon.WallpaperRotator:bindHotkeys({

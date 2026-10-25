@@ -475,6 +475,39 @@ test("cache timeout stays locked until exit; failures are explicit", function()
     assert(f.hasLog("partial measurements") and f.hasLog("permission denied"))
 end)
 
+test("cleanup reports can be silenced without disabling cleanup or errors", function()
+    local f, s = fixture()
+    assert(s.logCleanupReports == true)
+    s.logCleanupReports = false
+    s.maxStagedFiles = 1
+    f.add("stage_a.jpg", 4)
+    f.add("stage_b.jpg", 4)
+    s:cleanStaging()
+    assert(f.count() == 1 and not f.hasLog("Staging cleanup:"))
+    s:cleanCache()
+    s:cleanCache()
+    f.tasks[1].complete(0, "routine measurements")
+    assert(not f.hasLog("routine measurements"))
+    assert(not f.hasLog("completed successfully") and not f.hasLog("coalesced"))
+    s.inFlightPaths["/staging/stage_b.jpg"] = true
+    s:cleanCache()
+    assert(s.cacheCleanupPending and not f.hasLog("deferred"))
+    s.inFlightPaths["/staging/stage_b.jpg"] = nil
+    s:cleanCache()
+    f.tasks[2].complete(1, "partial measurements", "permission denied")
+    assert(f.hasLog("partial measurements") and f.hasLog("permission denied"))
+    f.deleteError = true
+    f.add("stage_a.jpg", 4)
+    s:cleanStaging()
+    assert(f.hasLog("Could not remove staging file") and f.hasLog("targets unmet"))
+    s.logCleanupReports = true
+    s:cleanStaging()
+    assert(f.hasLog("Staging cleanup:"))
+    s:cleanCache()
+    f.tasks[3].complete(0, "visible measurements")
+    assert(f.hasLog("visible measurements") and f.hasLog("completed successfully"))
+end)
+
 test("no-screen operations release paths and invalid cadence reports an error", function()
     local f, s = fixture()
     f.noScreens = true

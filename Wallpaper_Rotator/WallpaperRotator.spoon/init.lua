@@ -76,6 +76,12 @@ obj.maxStagedBytes = 268435456
 --- Default: true
 obj.enableCacheCleanup = true
 
+--- WallpaperRotator.logCleanupReports
+--- Variable
+--- Log routine staging/cache cleanup reports. Warnings and errors are always logged.
+--- Default: true (not persisted)
+obj.logCleanupReports = true
+
 --- WallpaperRotator.cleanupInterval
 --- Variable
 --- Number of rotation cycles between automatic cache cleanups.
@@ -310,7 +316,9 @@ function obj:cleanStaging()
             end
         end
     end
-    self.logger.i(string.format("Staging cleanup: removed %d; retained %d files / %d bytes.", removed, count, bytes))
+    if self.logCleanupReports then
+        self.logger.i(string.format("Staging cleanup: removed %d; retained %d files / %d bytes.", removed, count, bytes))
+    end
     if count > self.maxStagedFiles or bytes > self.maxStagedBytes then
         self.logger.w("Staging retention targets unmet: protected files or deletion failures prevent further pruning.")
     end
@@ -573,12 +581,12 @@ end
 ---  * The WallpaperRotator object
 function obj:cleanCache()
     if self.cacheCleanupTask then
-        self.logger.i("Wallpaper cache cleanup already running; request coalesced.")
+        if self.logCleanupReports then self.logger.i("Wallpaper cache cleanup already running; request coalesced.") end
         return self
     end
     if next(self.inFlightPaths) then
         self.cacheCleanupPending = true
-        self.logger.i("Wallpaper cache cleanup deferred until wallpaper operations settle.")
+        if self.logCleanupReports then self.logger.i("Wallpaper cache cleanup deferred until wallpaper operations settle.") end
         return self
     end
     self.cacheCleanupPending = false
@@ -590,12 +598,14 @@ function obj:cleanCache()
         finished = true
         if watchdog then watchdog:stop() end
         self.cacheCleanupTask = nil
-        if stdOut and stdOut ~= "" then self.logger.i("Wallpaper cache measurements:\n" .. stdOut) end
+        if stdOut and stdOut ~= "" and (self.logCleanupReports or timedOut or exitCode ~= 0) then
+            self.logger.i("Wallpaper cache measurements:\n" .. stdOut)
+        end
         if timedOut then
             reportError(self, "Wallpaper cache cleanup timed out; final task exit: " .. tostring(exitCode) ..
                 ". " .. tostring(stdErr))
         elseif exitCode == 0 then
-            self.logger.i("Wallpaper cache cleanup completed successfully.")
+            if self.logCleanupReports then self.logger.i("Wallpaper cache cleanup completed successfully.") end
         else
             reportError(self, "Wallpaper cache cleanup failed (" .. tostring(exitCode) .. "): " .. tostring(stdErr))
         end

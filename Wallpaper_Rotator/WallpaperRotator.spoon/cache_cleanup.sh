@@ -70,8 +70,23 @@ scan() {
     fi
     status=0
     if [ "$scope" = "wallpaper" ]; then
-        sizes=$(/usr/bin/find "$root" -path '*/com.apple.wallpaper*/*' -type f -iname '*.bmp' \
-            -exec /bin/sh "$0" --batch "$action" {} +) || status=1
+        # Select roots before find: pruning inside the shared root can still trigger sandbox errors.
+        sizes=$(
+            scan_status=0
+            for directory in "$root"/com.apple.wallpaper*; do
+                if [ -L "$directory" ]; then continue; fi
+                if [ ! -e "$directory" ]; then continue; fi
+                if [ ! -d "$directory" ]; then continue; fi
+                if [ ! -r "$directory" ] || [ ! -x "$directory" ]; then
+                    printf 'Wallpaper cache directory inaccessible: %s\n' "$directory" >&2
+                    scan_status=1
+                    continue
+                fi
+                /usr/bin/find "$directory" -type f -iname '*.bmp' \
+                    -exec /bin/sh "$0" --batch "$action" {} + || scan_status=1
+            done
+            exit "$scan_status"
+        ) || status=1
     else
         sizes=$(/usr/bin/find "$root" -type f -iname '*.bmp' \
             -exec /bin/sh "$0" --batch "$action" {} +) || status=1
